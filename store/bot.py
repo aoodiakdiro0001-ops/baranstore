@@ -18,10 +18,25 @@ import requests
 
 import state as store
 
+HERE = os.path.dirname(os.path.abspath(__file__))
+
+
+def _load_dotenv():
+    p = os.path.join(HERE, ".env")
+    if not os.path.exists(p):
+        return
+    with open(p, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, v = line.split("=", 1)
+                os.environ.setdefault(k.strip(), v.strip())
+
+
+_load_dotenv()
 TOKEN = os.environ.get("STORE_TG_TOKEN", "")
 ADMIN_ID = os.environ.get("ADMIN_ID", "")
 BASE = "https://api.telegram.org/bot" + TOKEN
-HERE = os.path.dirname(os.path.abspath(__file__))
 STATE = os.path.join(HERE, "store_state.json")
 TICKETS = os.path.join(HERE, "tickets.json")
 
