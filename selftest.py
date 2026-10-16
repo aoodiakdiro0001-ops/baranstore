@@ -104,6 +104,12 @@ def main():
     tickets = json.load(open(bot.TICKETS, encoding="utf-8"))
     assert len(tickets) == 3 and tickets[2]["id"] == "T-0003", tickets
 
+    # guard also fires on idle-state messages (no order started)
+    UID = 333
+    bot.handle_update(msg("ممكن اختراق حساب انستغرام؟"))
+    assert any("⛔" in c.get("text", "") for c in sent_to(333)), "idle refusal"
+    assert os.path.exists(bot.REJECTED_LOG)
+
     print("STOREBOT TEST PASS — tickets:", len(tickets))
 
 

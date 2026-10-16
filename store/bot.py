@@ -237,6 +237,11 @@ def handle_message(msg):
                             + (" (يمكنك إرفاق ملف أيضاً)" if not st.get("file_msg") else ""))
         return
 
+    if contains_blocked(text):
+        log_rejected(chat, (msg.get("from") or {}).get("username"), text)
+        store.clear_state(STATE, chat)
+        send_text(chat, REFUSE_TEXT, main_kb())
+        return
     send_text(chat, "أرسل /order لطلب خدمة أو اختر من الأزرار.", main_kb())
 
 
