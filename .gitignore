@@ -1,0 +1,5 @@
+.env
+store_state.json
+tickets.json
+__pycache__/
+.DS_Store
