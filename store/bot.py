@@ -111,6 +111,42 @@ def svc_by_id(sid):
     return {"id": sid, "name": sid, "price": "", "desc": ""}
 
 
+# Requests we NEVER serve (unauthorized access / harm). Checked on every
+# order text before a ticket is created.
+BLOCKED = [
+    "تجاوز المصادقة", "تجاوز التحقق", "تخطي المصادقة", "تخطي التحقق",
+    "اختراق", "إختراق", "تهكير", "هكر", "هاك",
+    "دخول حساب", "دخول بروفايل", "سحب حساب", "سرقة حساب",
+    "صيد", "phishing", "spyware", "برنامج تجسس", "keylogger",
+    "bypass", "2fa", "two-factor", "two factor",
+    "hack account", "hack facebook", "hack whatsapp",
+    "ddos", "هجوم على موقع", "تفجير", "rat ", "botnet",
+    "بطاقات مسروقة", "stolen", "تزوير",
+]
+REFUSE_TEXT = (
+    "⛔ عذراً، لا نقدم هذه الخدمة.\n"
+    "لا ننفذ: اختراق حسابات، تجاوز مصادقة، تجسس، هجمات، أو أي عمل "
+    "غير مصرّح به قانونياً.\n\n"
+    "خدماتنا: تنظيف ملفات، سكربتات مشروعة، فحص موقعك بإذنك. /order"
+)
+REJECTED_LOG = os.path.join(HERE, "rejected.log")
+
+
+def contains_blocked(text):
+    t = " " + (text or "").lower() + " "
+    return any(b.lower() in t for b in BLOCKED)
+
+
+def log_rejected(user, username, text):
+    try:
+        with open(REJECTED_LOG, "a", encoding="utf-8") as f:
+            f.write("%s | %s (@%s) | %s\n" % (
+                datetime.now().strftime("%Y-%m-%d %H:%M"),
+                user, username, (text or "")[:200].replace("\n", " ")))
+    except Exception:
+        pass
+
+
 def notify_admin(text, fwd=None):
     if not ADMIN_ID:
         return
@@ -151,6 +187,12 @@ def handle_message(msg):
 
     doc = msg.get("document")
     if doc and st.get("step") in ("idle", "details", "service"):
+        if contains_blocked(msg.get("caption", "")):
+            log_rejected(chat, (msg.get("from") or {}).get("username"),
+                         "[caption] " + (msg.get("caption") or ""))
+            store.clear_state(STATE, chat)
+            send_text(chat, REFUSE_TEXT, main_kb())
+            return
         # file starts/continues an order
         if st.get("step") == "idle":
             store.set_state(STATE, chat, {
@@ -165,6 +207,11 @@ def handle_message(msg):
         return
 
     if st.get("step") == "details" and text:
+        if contains_blocked(text):
+            log_rejected(chat, (msg.get("from") or {}).get("username"), text)
+            store.clear_state(STATE, chat)
+            send_text(chat, REFUSE_TEXT, main_kb())
+            return
         if text == "تم" and not st.get("details"):
             send_text(chat, "✏️ اكتب المطلوب أولاً ثم (تم).")
             return

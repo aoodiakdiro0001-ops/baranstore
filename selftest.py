@@ -54,6 +54,7 @@ def sent_to(uid):
 
 
 def main():
+    global UID
     for f in (bot.STATE, bot.TICKETS):
         if os.path.exists(f):
             os.remove(f)
@@ -83,6 +84,25 @@ def main():
     assert tickets[1]["service"] == "file", tickets[1]
     fwd = [u for u, c in CALLS if u.endswith("/forwardMessage")]
     assert fwd, "file forwarded to admin"
+
+    # guard: hacking request refused, no ticket, logged
+    UID = 222
+    bot.handle_update(msg("/order"))
+    bot.handle_update(cb("order:script"))
+    bot.handle_update(msg("اريد سكربت لتجاوز المصادقة الثنائية للفيسبوك"))
+    assert any("⛔" in c.get("text", "") for c in sent_to(222)), "refusal"
+    tickets = json.load(open(bot.TICKETS, encoding="utf-8"))
+    assert len(tickets) == 2, tickets
+    assert not any("T-" in c.get("text", "") for c in sent_to(999)
+                   if "تجاوز" in c.get("text", "")), "leaked to admin"
+    assert os.path.exists(bot.REJECTED_LOG), "rejected log"
+    # legit request still passes
+    bot.handle_update(msg("/order"))
+    bot.handle_update(cb("order:script"))
+    bot.handle_update(msg("اريد سكربت تنظيف ملفات"))
+    bot.handle_update(msg("تم"))
+    tickets = json.load(open(bot.TICKETS, encoding="utf-8"))
+    assert len(tickets) == 3 and tickets[2]["id"] == "T-0003", tickets
 
     print("STOREBOT TEST PASS — tickets:", len(tickets))
 

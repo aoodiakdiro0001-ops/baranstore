@@ -1,5 +1,6 @@
 .env
 store_state.json
 tickets.json
+rejected.log
 __pycache__/
 .DS_Store
